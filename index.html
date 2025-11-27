@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReasonForge</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚒️</text></svg>">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Import map for bootstrap-llm-provider, lit-html, and asyncLLM -->
+    <script type="importmap">
+    {
+        "imports": {
+            "bootstrap-llm-provider": "https://cdn.jsdelivr.net/npm/bootstrap-llm-provider@1",
+            "lit-html": "https://cdn.jsdelivr.net/npm/lit-html@3/+esm",
+            "lit-html/": "https://cdn.jsdelivr.net/npm/lit-html@3/",
+            "asyncllm": "https://cdn.jsdelivr.net/npm/asyncllm@2",
+            "partial-json": "https://cdn.jsdelivr.net/npm/partial-json@0.1.7/+esm"
+        }
+    }
+    </script>
+</head>
+<body class="bg-light">
+    <!-- Header -->
+    <nav class="navbar navbar-light bg-white border-bottom mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-diagram-3 text-primary me-2"></i>
+                ReasonForge
+            </a>
+            <button id="settingsBtn" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-gear me-1"></i>Configure LLM Provider
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container" style="max-width: 80%;">
+        <!-- Provider Status Banner -->
+        <div id="providerBanner" class="alert alert-info d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <i class="bi bi-info-circle me-2"></i>
+                <span id="providerStatus">Configure your OpenAI-compatible API provider before generating plans</span>
+            </div>
+            <button id="configureBtn" class="btn btn-info btn-sm">
+                <i class="bi bi-plug me-1"></i>Configure Provider
+            </button>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+
+        <!-- Problem Input Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-pencil-square text-primary me-2"></i>
+                            Problem Statement
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea 
+                            id="problemInput" 
+                            class="form-control mb-3" 
+                            rows="6" 
+                            placeholder="Describe your coding, algorithmic, or system design problem here..."></textarea>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <button id="generateBtn" class="btn btn-primary" disabled>
+                                    <i class="bi bi-lightning-charge me-1"></i>Generate Plans
+                                </button>
+                                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span id="loadingText" class="text-muted small ms-2 d-none"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="plannerModelSelect" class="form-label small text-muted">Planner Model</label>
+                                <select id="plannerModelSelect" class="form-select form-select-sm" disabled>
+                                    <option value="">Select Planner model...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="judgeModelSelect" class="form-label small text-muted">Judge Model</label>
+                                <select id="judgeModelSelect" class="form-select form-select-sm" disabled>
+                                    <option value="">Select Judge model...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="row mb-4 d-none">
+            <!-- Left: Planner Output -->
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-map text-primary me-2"></i>
+                            Generated Plans
+                        </h5>
+                        <span class="badge bg-secondary" id="planCount">0 plans</span>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 700px;" id="plansContainer">
+                        <!-- Plans rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Judge Output -->
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-award text-primary me-2"></i>
+                            Judge Evaluation
+                        </h5>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 700px;" id="judgeContainer">
+                        <!-- Judge results rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chatSection" class="row mb-4 d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-dots text-primary me-2"></i>
+                            Refinement Chat
+                        </h5>
+                        <span class="badge bg-secondary" id="chatStatus">Locked</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Chat Messages -->
+                        <div id="chatMessages" class="mb-3 p-3 border rounded bg-white overflow-auto" style="height: 400px;">
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-lock fs-1 d-block mb-3"></i>
+                                <p class="mb-0">Chat will unlock after generating and evaluating plans</p>
+                            </div>
+                        </div>
+                        <!-- Chat Input -->
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                id="chatInput" 
+                                class="form-control" 
+                                placeholder="Ask questions, request tweaks, or get implementation details..."
+                                disabled>
+                            <button id="chatSendBtn" class="btn btn-primary" disabled>
+                                <i class="bi bi-send me-1"></i>Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- App Script (ES Module) -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
