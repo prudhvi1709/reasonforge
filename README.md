@@ -8,6 +8,7 @@ A sophisticated web application that implements an evolutionary reasoning workfl
 - ⚖️ **Judge LLM**: Evaluates plans using evolutionary reasoning (crossover, mutation)
 - ✨ **Synthesized Plan**: Judge generates optimized plan combining best aspects of all candidates
 - 💬 **Chat Interface**: Iterative refinement of the synthesized best plan
+- 🚀 **OpenAI Responses API**: Stateful conversations without server-side state management
 - 🔌 **Multi-Provider Support**: Works with OpenAI, OpenRouter, Ollama, Groq, and more
 - ⚡ **Streaming Responses**: Real-time token streaming with asyncLLM for instant feedback
 - 🎨 **Efficient Rendering**: Uses lit-html for minimal DOM updates
@@ -28,7 +29,9 @@ A sophisticated web application that implements an evolutionary reasoning workfl
   - [bootstrap-llm-provider](https://github.com/sanand0/bootstrap-llm-provider) - Multi-provider configuration
   - [asyncLLM](https://www.npmjs.com/package/asyncllm) - Streaming LLM responses
   - [partial-json](https://www.npmjs.com/package/partial-json) - Parse incomplete JSON
-- **API**: Chat Completions API (`/v1/chat/completions`) with streaming support
+- **API**: 
+  - **OpenAI**: Responses API (`/v1/responses`) - Stateful conversations, no server required
+  - **Other Providers**: Chat Completions API (`/v1/chat/completions`) - Universal compatibility
 
 ### Project Structure
 
@@ -122,6 +125,71 @@ The app uses [asyncLLM](https://www.npmjs.com/package/asyncllm) for real-time to
 - **Better UX**: No waiting for complete responses
 - **Partial JSON**: Plans/evaluations render progressively using `partial-json`
 - **Error Recovery**: Graceful handling of incomplete responses
+
+### OpenAI Responses API vs Chat Completions API
+
+ReasonForge intelligently uses different APIs based on your provider:
+
+#### 🚀 **OpenAI Responses API** (for api.openai.com)
+
+**Endpoint**: `/v1/responses`
+
+**Key Benefits:**
+- ✅ **Stateful Conversations**: Server maintains conversation context automatically
+- ✅ **No History Management**: After first message, only send new messages (not full history)
+- ✅ **Lower Bandwidth**: Subsequent messages are just the user input + `previous_response_id`
+- ✅ **previous_response_id**: Automatically tracked from each response's `id` field
+- ✅ **Server-Side State**: OpenAI remembers the full conversation - no client-side management
+
+**Request Format (First Message):**
+```json
+{
+  "model": "gpt-4.1-mini",
+  "input": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "..." }
+  ]
+}
+```
+
+**Request Format (Follow-up Messages):**
+```json
+{
+  "model": "gpt-4.1-mini",
+  "input": "What about error handling?",
+  "previous_response_id": "resp_abc123..."
+}
+```
+
+**How Session Works:**
+1. First chat message sends full context (system prompt, problem, plan)
+2. Response includes an `id` field (e.g., `"id": "resp_abc123..."`)
+3. Subsequent messages only send the new user input + `previous_response_id`
+4. OpenAI server maintains full conversation history - no need to resend!
+
+**Note on JSON Output**: The Responses API doesn't have a simple `json_object` mode like Chat Completions. While it supports `json_schema` (which requires a full schema definition), ReasonForge relies on prompt instructions to request JSON output, which works reliably with modern models.
+
+#### 🔌 **Chat Completions API** (for other providers)
+
+**Endpoint**: `/v1/chat/completions`
+
+**Key Benefits:**
+- ✅ **Universal Compatibility**: Works with OpenRouter, Ollama, Groq, Mistral, Together AI
+- ✅ **Standard Format**: Industry-standard API format
+- ✅ **Stateless**: Full control over conversation history
+
+**Request Format:**
+```json
+{
+  "model": "gpt-4.1-mini",
+  "messages": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "..." }
+  ]
+}
+```
+
+**Automatic Detection**: The app automatically detects your provider and uses the appropriate API format. When connected, the UI shows which API is being used.
 
 ## Getting Started
 
