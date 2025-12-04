@@ -3,9 +3,11 @@
  */
 import { html, render } from "lit-html";
 import { unsafeHTML } from "lit-html/directives/unsafe-html.js";
-import { llmConfig, prompts, loadPrompts, configureLLMProvider, getFilteredModels, 
-         callPlannerLLM, callJudgeLLM, callChatLLM, resetConversationState, getAPIType } from "./llm-service.js";
-import { renderPlans, renderJudgeResults } from "./renderers.js";
+import { llmConfig, prompts, defaultPrompts, loadPrompts, configureLLMProvider, getFilteredModels, 
+         callPlannerLLM, callJudgeLLM, callChatLLM, resetConversationState, getAPIType,
+         saveCustomPrompts, resetPromptToDefault } from "./llm-service.js";
+import { renderPlans, renderJudgeResults, renderJudgeLoading } from "./renderers.js";
+import { problemStatements } from "./config.js";
 
 const appState = {
     problem: "", plannerJson: null, judgeJson: null, bestPlan: null, chatUnlocked: false,
@@ -20,7 +22,9 @@ const el = {
     chatSection: $("chatSection"), chatStatus: $("chatStatus"), chatMessages: $("chatMessages"),
     chatInput: $("chatInput"), chatSendBtn: $("chatSendBtn"), settingsBtn: $("settingsBtn"),
     configureBtn: $("configureBtn"), providerBanner: $("providerBanner"), providerStatus: $("providerStatus"),
-    plannerModelSelect: $("plannerModelSelect"), judgeModelSelect: $("judgeModelSelect")
+    plannerModelSelect: $("plannerModelSelect"), judgeModelSelect: $("judgeModelSelect"),
+    problemCardsContainer: $("problemCardsContainer"), advancedSettingsBtn: $("advancedSettingsBtn"),
+    advancedSettingsModal: null
 };
 
 const showAlert = (msg, type = "danger") => {
@@ -162,6 +166,7 @@ const generate = async () => {
         renderPlans(appState.plannerJson, el.plansContainer, el.planCount);
 
         setLoading(true, "Evaluating plans...");
+        renderJudgeLoading(el.judgeContainer);
         appState.judgeJson = await callJudgeLLM(problem, appState.plannerJson, d => d?.plan_reviews && renderJudgeResults(d, appState.plannerJson, el.judgeContainer));
         renderJudgeResults(appState.judgeJson, appState.plannerJson, el.judgeContainer);
 
@@ -175,9 +180,103 @@ const generate = async () => {
     }
 };
 
+// Problem Cards Rendering
+const renderProblemCards = () => {
+    const cardTemplate = (problem) => html`
+        <div class="col-md-4">
+            <div class="card h-100 problem-card border-0 shadow-sm" 
+                 style="cursor: pointer; transition: all 0.2s ease;"
+                 @click=${() => selectProblem(problem)}
+                 @mouseenter=${(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                 @mouseleave=${(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-${problem.color} bg-opacity-10 p-2 me-3">
+                            <i class="bi bi-${problem.icon} text-${problem.color} fs-4"></i>
+                        </div>
+                        <h6 class="card-title mb-0 fw-bold">${problem.title}</h6>
+                    </div>
+                    <p class="card-text text-muted small mb-3">${problem.description}</p>
+                    <div class="d-flex flex-wrap gap-1">
+                        ${problem.tags.map(tag => html`
+                            <span class="badge bg-${problem.color} bg-opacity-10 text-${problem.color} fw-normal">${tag}</span>
+                        `)}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <small class="text-${problem.color}">
+                        <i class="bi bi-arrow-right me-1"></i>Click to use this problem
+                    </small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    render(html`${problemStatements.map(cardTemplate)}`, el.problemCardsContainer);
+};
+
+const selectProblem = (problem) => {
+    el.problemInput.value = problem.problem;
+    el.problemInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    
+    // Auto-click generate button if provider is configured
+    if (llmConfig.baseUrl) {
+        generate();
+    } else {
+        el.problemInput.focus();
+        showAlert(`Loaded "${problem.title}" problem. Configure provider first, then click Generate Plans!`, "warning");
+    }
+};
+
+// Advanced Settings Modal
+const initAdvancedSettingsModal = () => {
+    el.advancedSettingsModal = new bootstrap.Modal(document.getElementById('advancedSettingsModal'));
+    
+    const plannerEditor = $("plannerPromptEditor");
+    const judgeEditor = $("judgePromptEditor");
+    const chatEditor = $("chatPromptEditor");
+    
+    // Open modal and populate editors
+    el.advancedSettingsBtn.addEventListener("click", () => {
+        plannerEditor.value = prompts.planner;
+        judgeEditor.value = prompts.judge;
+        chatEditor.value = prompts.chat;
+        el.advancedSettingsModal.show();
+    });
+    
+    // Save prompts
+    $("savePromptsBtn").addEventListener("click", () => {
+        saveCustomPrompts({
+            planner: plannerEditor.value,
+            judge: judgeEditor.value,
+            chat: chatEditor.value
+        });
+        el.advancedSettingsModal.hide();
+        showAlert("Prompts saved successfully!", "success");
+    });
+    
+    // Reset buttons
+    $("resetPlannerPrompt").addEventListener("click", () => {
+        plannerEditor.value = resetPromptToDefault("planner");
+        showAlert("Planner prompt reset to default", "info");
+    });
+    
+    $("resetJudgePrompt").addEventListener("click", () => {
+        judgeEditor.value = resetPromptToDefault("judge");
+        showAlert("Judge prompt reset to default", "info");
+    });
+    
+    $("resetChatPrompt").addEventListener("click", () => {
+        chatEditor.value = resetPromptToDefault("chat");
+        showAlert("Chat prompt reset to default", "info");
+    });
+};
+
 const init = async () => {
     try { await loadPrompts(); await configureLLMProvider(false); } catch {}
     updateProviderUI();
+    renderProblemCards();
+    initAdvancedSettingsModal();
 
     const saveModels = () => localStorage.setItem("reasonforge_model_selection", 
         JSON.stringify({ plannerModel: llmConfig.plannerModel, judgeModel: llmConfig.judgeModel }));

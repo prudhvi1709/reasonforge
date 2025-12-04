@@ -104,19 +104,48 @@ const planReview = (review, isBest) => {
     `;
 };
 
+// Loading spinner for the synthesized plan section
+const synthesizedPlanLoading = () => html`
+    <div class="card border-success border-2 mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-stars me-2"></i>Synthesized Best Plan
+                <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
+            </h5>
+        </div>
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mb-0">Analyzing plans and synthesizing the best solution...</p>
+        </div>
+    </div>
+`;
+
+export const renderJudgeLoading = (container) => {
+    render(html`
+        ${synthesizedPlanLoading()}
+        <div class="text-center text-muted py-3">
+            <small><i class="bi bi-hourglass-split me-1"></i>Evaluating candidate plans...</small>
+        </div>
+    `, container);
+};
+
 export const renderJudgeResults = (judgeJson, plannerJson, container) => {
     const reviews = judgeJson.plan_reviews || [];
     const bestId = judgeJson.best_candidate_id || judgeJson.best_plan_id;
+    const hasSynthesizedPlan = judgeJson.synthesized_plan && judgeJson.synthesized_plan.title;
 
     render(html`
-        ${judgeJson.synthesized_plan ? synthesizedPlan(judgeJson.synthesized_plan) : html`
+        ${hasSynthesizedPlan ? synthesizedPlan(judgeJson.synthesized_plan) : 
+          (bestId ? html`
             <div class="card border-success mb-3">
                 <div class="card-header bg-success text-white"><i class="bi bi-trophy-fill me-2"></i>Best: ${bestId}</div>
                 <div class="card-body"><p class="mb-0">${judgeJson.best_candidate_rationale || judgeJson.best_plan_rationale || ''}</p></div>
-            </div>`}
+            </div>` : synthesizedPlanLoading())}
         ${evolutionNotes(judgeJson.evolution_notes)}
         ${bestId ? html`<div class="alert alert-success mb-3"><i class="bi bi-info-circle-fill me-2"></i><strong>Base Candidate:</strong> ${bestId}</div>` : ''}
-        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Plan Reviews</h6>
+        ${reviews.length ? html`<h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Plan Reviews</h6>` : ''}
         ${reviews.map(r => planReview(r, r.plan_id === bestId))}
         ${judgeJson.revised_prompt ? html`
             <div class="card border-info mt-3">

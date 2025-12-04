@@ -13,6 +13,9 @@ const DEFAULT_BASE_URLS = [
 
 export const llmConfig = { baseUrl: null, apiKey: null, models: [], plannerModel: null, judgeModel: null, responseId: null };
 export const prompts = { planner: "", judge: "", chat: "" };
+export const defaultPrompts = { planner: "", judge: "", chat: "" };
+
+const PROMPTS_STORAGE_KEY = "reasonforge_custom_prompts";
 
 const isOpenAIProvider = () => llmConfig.baseUrl?.includes("api.openai.com");
 
@@ -21,8 +24,33 @@ export async function loadPrompts() {
     await Promise.all(Object.entries(files).map(async ([key, path]) => {
         const res = await fetch(path);
         if (!res.ok) throw new Error(`Failed to load ${path}`);
-        prompts[key] = await res.text();
+        const content = await res.text();
+        defaultPrompts[key] = content;
+        prompts[key] = content;
     }));
+    
+    // Load custom prompts from localStorage if available
+    try {
+        const saved = JSON.parse(localStorage.getItem(PROMPTS_STORAGE_KEY) || "{}");
+        if (saved.planner) prompts.planner = saved.planner;
+        if (saved.judge) prompts.judge = saved.judge;
+        if (saved.chat) prompts.chat = saved.chat;
+    } catch {}
+}
+
+export function saveCustomPrompts(customPrompts) {
+    Object.assign(prompts, customPrompts);
+    localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(customPrompts));
+}
+
+export function resetPromptToDefault(key) {
+    prompts[key] = defaultPrompts[key];
+    try {
+        const saved = JSON.parse(localStorage.getItem(PROMPTS_STORAGE_KEY) || "{}");
+        delete saved[key];
+        localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(saved));
+    } catch {}
+    return defaultPrompts[key];
 }
 
 export async function configureLLMProvider(forceShow = false) {
