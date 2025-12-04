@@ -48,8 +48,8 @@ const setLoading = (loading, text = "") => {
 const escapeHtml = t => { const d = document.createElement("div"); d.textContent = t || ""; return d.innerHTML; };
 
 const formatChat = c => escapeHtml(c)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-light border p-3 rounded mt-2"><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code class="bg-light border px-2 py-1 rounded" style="color:#d63384;">$1</code>')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="border p-3 rounded mt-2"><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code class="border px-2 py-1 rounded" style="color:#d63384;">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
 const updateProviderUI = () => {
@@ -104,7 +104,7 @@ const unlockChat = () => {
 
 const chatMsg = (role, content, streaming = false) => html`
     <div class="d-flex ${role === 'user' ? 'justify-content-end' : 'justify-content-start'} mb-3">
-        <div class="p-3 rounded ${role === 'user' ? 'bg-primary text-white' : 'bg-light border'}" style="max-width:80%;">
+        <div class="p-3 rounded ${role === 'user' ? 'bg-primary text-white' : 'border'}" style="max-width:80%;">
             <div class="small mb-2 ${role === 'user' ? 'opacity-75' : 'text-muted'}">
                 <i class="bi bi-${role === 'user' ? 'person-fill' : 'robot'} me-1"></i>${role === 'user' ? 'You' : 'Assistant'}
                 ${streaming ? html`<span class="spinner-border spinner-border-sm ms-2"></span>` : ''}
@@ -184,7 +184,7 @@ const generate = async () => {
 const renderProblemCards = () => {
     const cardTemplate = (problem) => html`
         <div class="col-md-4">
-            <div class="card h-100 problem-card border-0 shadow-sm" 
+            <div class="card h-100 problem-card border shadow-sm" 
                  style="cursor: pointer; transition: all 0.2s ease;"
                  @click=${() => selectProblem(problem)}
                  @mouseenter=${(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
