@@ -111,11 +111,76 @@ function parseJsonResponse(content, source) {
 }
 
 export async function callPlannerLLM(problemText, onUpdate = null) {
-    const messages = [
-        { role: "system", content: prompts.planner },
-        { role: "user", content: `Problem statement:\n\n${problemText}\n\nGenerate 3 distinct solution plans. Output ONLY JSON.` }
-    ];
-    return parseJsonResponse(await callLLM(messages, 'planner', onUpdate, true), "Planner");
+    // Track the state of all 3 plans as they stream in
+    const planStates = [null, null, null];
+    let completedCount = 0;
+    
+    // Helper to merge current plan states and trigger UI update
+    const triggerUpdate = () => {
+        if (!onUpdate) return;
+        
+        const validPlans = planStates.filter(p => p !== null);
+        if (validPlans.length === 0) return;
+        
+        onUpdate({
+            problem: problemText,
+            plans: validPlans
+        });
+    };
+    
+    // Make 3 parallel requests to get independent plans
+    const planPromises = [1, 2, 3].map(async (planNum) => {
+        const planIndex = planNum - 1;
+        const messages = [
+            { role: "system", content: prompts.planner },
+            { role: "user", content: `Problem statement:\n\n${problemText}\n\nGenerate a distinct solution plan. Output ONLY JSON.` }
+        ];
+        
+        // Create a streaming update handler for this specific plan
+        const planOnUpdate = onUpdate ? (partialData) => {
+            if (partialData && partialData.plan) {
+                const plan = partialData.plan;
+                // Ensure the plan has an id
+                if (!plan.id || plan.id === "string") {
+                    plan.id = `plan_${planNum}`;
+                }
+                planStates[planIndex] = plan;
+                triggerUpdate();
+            }
+        } : null;
+        
+        const response = parseJsonResponse(await callLLM(messages, 'planner', planOnUpdate, true), "Planner");
+        
+        // Ensure the final plan has an id
+        if (response.plan && (!response.plan.id || response.plan.id === "string")) {
+            response.plan.id = `plan_${planNum}`;
+        }
+        
+        // Update final state for this plan
+        planStates[planIndex] = response.plan;
+        completedCount++;
+        
+        // Trigger update when this plan completes
+        triggerUpdate();
+        
+        return response;
+    });
+    
+    // Wait for all 3 requests to complete
+    const responses = await Promise.all(planPromises);
+    
+    // Combine the 3 independent plans into a single response
+    const combinedResponse = {
+        problem: responses[0].problem || problemText,
+        plans: planStates
+    };
+    
+    // Trigger final update with all plans
+    if (onUpdate) {
+        onUpdate(combinedResponse);
+    }
+    
+    return combinedResponse;
 }
 
 export async function callJudgeLLM(problemText, plannerJson, onUpdate = null) {
