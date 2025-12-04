@@ -279,6 +279,52 @@ Engage in conversation to:
 - Generate code snippets
 - Explore alternative approaches
 
+### 5. Export Results
+
+Save your reasoning artifacts:
+- **Markdown Report**: Complete human-readable documentation with all plans, evaluations, and chat history
+- **JSON Export**: Structured data for programmatic access or future re-import
+
+Click the export buttons in the results section header to download your analysis.
+
+## Export Functionality
+
+ReasonForge allows you to export your reasoning artifacts in two formats:
+
+### Markdown Report (.md)
+
+A comprehensive, human-readable document containing:
+- Problem statement and configuration
+- All 3 candidate plans with scores, steps, assumptions, and trade-offs
+- Judge evaluation with synthesized best plan
+- Evolution analysis (crossover, mutations, rationale)
+- Plan reviews with feedback and suggestions
+- Complete chat conversation history
+
+**Use cases:**
+- Documentation and knowledge sharing
+- Version control (Git-friendly format)
+- Converting to PDF/HTML with tools like Pandoc
+- Sharing via email, Slack, or documentation systems
+
+### JSON Export (.json)
+
+Complete structured data export containing:
+- All metadata (models, timestamps, provider)
+- Full planner and judge JSON responses
+- Chat history with timestamps
+- Application state
+
+**Use cases:**
+- Programmatic access and automation
+- Data analysis and metrics
+- Future re-import feature (planned)
+- Integration with other tools (Jira, Confluence, etc.)
+
+Both exports are available via buttons in the results section header after generating plans.
+
+---
+
 ## Customization
 
 ### Edit Prompts
@@ -477,8 +523,9 @@ notice and this permission notice appear in all copies.
 ## Roadmap
 
 - [x] Persistent configuration (localStorage)
-- [ ] Save/load conversation sessions
-- [ ] Export plans as markdown/PDF
+- [x] Export plans as markdown/JSON
+- [ ] Save/load conversation sessions (import JSON)
+- [ ] Export plans as PDF
 - [ ] Multiple iterations (generation N → feedback → generation N+1)
 - [ ] Visualization of plan evolution
 - [ ] Custom scoring criteria

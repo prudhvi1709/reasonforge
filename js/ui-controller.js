@@ -8,6 +8,7 @@ import { llmConfig, prompts, defaultPrompts, loadPrompts, configureLLMProvider, 
          saveCustomPrompts, resetPromptToDefault } from "./llm-service.js";
 import { renderPlans, renderJudgeResults, renderJudgeLoading } from "./renderers.js";
 import { problemStatements } from "./config.js";
+import { exportMarkdownReport, exportJSONData } from "./export-service.js";
 
 const appState = {
     problem: "", plannerJson: null, judgeJson: null, bestPlan: null, chatUnlocked: false,
@@ -24,7 +25,8 @@ const el = {
     configureBtn: $("configureBtn"), providerBanner: $("providerBanner"), providerStatus: $("providerStatus"),
     plannerModelSelect: $("plannerModelSelect"), judgeModelSelect: $("judgeModelSelect"),
     problemCardsContainer: $("problemCardsContainer"), advancedSettingsBtn: $("advancedSettingsBtn"),
-    advancedSettingsModal: null
+    advancedSettingsModal: null,
+    exportMarkdownBtn: $("exportMarkdownBtn"), exportJsonBtn: $("exportJsonBtn")
 };
 
 const showAlert = (msg, type = "danger") => {
@@ -288,6 +290,25 @@ const init = async () => {
     el.configureBtn.addEventListener("click", () => configureLLMProvider(true).then(updateProviderUI));
     el.plannerModelSelect.addEventListener("change", e => { llmConfig.plannerModel = e.target.value; saveModels(); });
     el.judgeModelSelect.addEventListener("change", e => { llmConfig.judgeModel = e.target.value; saveModels(); });
+    
+    // Export functionality
+    el.exportMarkdownBtn.addEventListener("click", () => {
+        try {
+            const filename = exportMarkdownReport(appState, llmConfig);
+            showAlert(`Report exported successfully as ${filename}`, "success");
+        } catch (e) {
+            showAlert(`Export failed: ${e.message}`, "danger");
+        }
+    });
+    
+    el.exportJsonBtn.addEventListener("click", () => {
+        try {
+            const filename = exportJSONData(appState, llmConfig);
+            showAlert(`Data exported successfully as ${filename}`, "success");
+        } catch (e) {
+            showAlert(`Export failed: ${e.message}`, "danger");
+        }
+    });
 };
 
 init();
