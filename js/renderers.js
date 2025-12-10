@@ -183,6 +183,18 @@ export const renderJudgeResults = (judgeJson, plannerJson, container) => {
             </h5>
         </div>
 
+        <!-- Plan Reviews in 3 Columns -->
+        ${reviews.length ? html`
+            <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Plan Reviews</h6>
+            <div class="row g-3 mb-4">
+                ${reviews.map(r => html`
+                    <div class="col-md-4 d-flex">
+                        ${planReviewCompact(r, r.plan_id === bestId)}
+                    </div>
+                `)}
+            </div>
+        ` : ''}
+
         <!-- Synthesized/Best Plan -->
         ${hasSynthesizedPlan ? synthesizedPlan(judgeJson.synthesized_plan) : 
           (bestId ? html`
@@ -192,18 +204,6 @@ export const renderJudgeResults = (judgeJson, plannerJson, container) => {
             </div>` : synthesizedPlanLoading())}
         
         ${evolutionNotes(judgeJson.evolution_notes)}
-        
-        <!-- Plan Reviews in 3 Columns -->
-        ${reviews.length ? html`
-            <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Plan Reviews</h6>
-            <div class="row g-3 mb-3">
-                ${reviews.map(r => html`
-                    <div class="col-md-4 d-flex">
-                        ${planReviewCompact(r, r.plan_id === bestId)}
-                    </div>
-                `)}
-            </div>
-        ` : ''}
         
         ${judgeJson.revised_prompt ? html`
             <div class="card border border-info mt-3">
